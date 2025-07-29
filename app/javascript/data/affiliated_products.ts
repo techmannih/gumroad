@@ -27,3 +27,22 @@ export const getPagedAffiliatedProducts = (page?: number, query?: string, sort?:
     cancel: () => abort.abort(),
   };
 };
+
+export async function approveAffiliatedProduct(productId: string) {
+  const response = await request({
+    method: "PATCH",
+    accept: "json",
+    url: Routes.internal_affiliated_product_path(productId),
+    data: { approved: true },
+  });
+  if (!response.ok) throw new Error("Request failed");
+}
+
+export async function removeAffiliatedProduct(productId: string) {
+  const response = await request({
+    method: "DELETE",
+    accept: "json",
+    url: Routes.internal_affiliated_product_path(productId),
+  });
+  if (!response.ok) throw new Error("Request failed");
+}

@@ -61,6 +61,19 @@ describe ReceiptPresenter::FooterInfo, :vcr do
     it "returns expected text" do
       expect(presenter.manage_subscription_note).to eq("You'll be charged once a month.")
     end
+
+    context "when the subscription is an installment plan" do
+      let(:product) { create(:product, :with_installment_plan) }
+      let(:purchase) { create(:installment_plan_purchase, link: product) }
+
+      it "returns installment plan text" do
+        start_date = purchase.subscription.true_original_purchase.created_at.to_fs(:formatted_date_abbrev_month)
+        end_date = purchase.subscription.end_time_of_subscription.to_fs(:formatted_date_abbrev_month)
+        expect(presenter.manage_subscription_note).to eq(
+          "Installment plan initiated on #{start_date}. Your final charge will be on #{end_date}. You can manage your payment settings here."
+        )
+      end
+    end
   end
 
   describe "#manage_subscription_link" do

@@ -18,7 +18,13 @@ class ReceiptPresenter::FooterInfo
   end
 
   def manage_subscription_note
-    "You'll be charged once #{recurrence_long_indicator(chargeable.subscription.recurrence)}."
+    if chargeable.subscription.is_installment_plan?
+      start_date = chargeable.subscription.true_original_purchase.created_at.to_fs(:formatted_date_abbrev_month)
+      end_date = chargeable.subscription.end_time_of_subscription.to_fs(:formatted_date_abbrev_month)
+      "Installment plan initiated on #{start_date}. Your final charge will be on #{end_date}. You can manage your payment settings here."
+    else
+      "You'll be charged once #{recurrence_long_indicator(chargeable.subscription.recurrence)}."
+    end
   end
 
   def manage_subscription_link

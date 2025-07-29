@@ -24,6 +24,7 @@ class ReceiptPresenter::PaymentInfo
 
   def notes
     [
+      final_installment_note,
       recurring_subscription_notes,
       usd_currency_note,
       credit_card_note
@@ -150,11 +151,35 @@ class ReceiptPresenter::PaymentInfo
       "The charge will be listed as GUMRD.COM* on your credit card statement."
     end
 
+    def final_installment_note
+      purchase = chargeable.successful_purchases.first
+      subscription = purchase&.subscription
+      return unless subscription&.is_installment_plan?
+      return unless subscription.remaining_charges_count.zero?
+
+      charges = subscription.purchases.successful.order(:created_at)
+      previous_dates = charges[0...-1].map { _1.created_at.to_fs(:formatted_date_abbrev_month) }
+      total_paid = formatted_dollar_amount(charges.sum(&:total_transaction_cents))
+      product_name = purchase.link.name
+
+      msg = "✅ This is your final payment for your installment plan. You will not be charged again."
+      msg += " Previous charges on #{previous_dates.join(', ')}." if previous_dates.any?
+      msg += " Total Paid: #{total_paid} for #{product_name}."
+      msg
+    end
+
     def today_payment_heading_attribute
       return unless any_upcoming_payments?
 
+      label = "Today's payment"
+      subscription = chargeable.successful_purchases.first&.subscription
+      if subscription&.is_installment_plan?
+        index = installment_index(subscription, chargeable.successful_purchases.first)
+        label = "Today's payment: #{index} of #{subscription.charge_occurrence_count}"
+      end
+
       {
-        label: "Today's payment",
+        label: label,
         value: nil
       }
     end
@@ -217,8 +242,15 @@ class ReceiptPresenter::PaymentInfo
     end
 
     def upcoming_payment_heading_attribute
+      label = "Upcoming #{"payment".pluralize(upcoming_price_attributes.size)}"
+      subscription = chargeable.successful_purchases.first&.subscription
+      if subscription&.is_installment_plan?
+        index = installment_index(subscription, chargeable.successful_purchases.first) + 1
+        label = "Upcoming payment: #{index} of #{subscription.charge_occurrence_count}"
+      end
+
       {
-        label: "Upcoming #{"payment".pluralize(upcoming_price_attributes.size)}",
+        label: label,
         value: nil
       }
     end
@@ -302,7 +334,7 @@ class ReceiptPresenter::PaymentInfo
       end
     end
 
-    def calculate_tax_amount_cents(amount_cents:, tax_rate_field:)
+  def calculate_tax_amount_cents(amount_cents:, tax_rate_field:)
       taxjar_info = chargeable.purchase_taxjar_info
       return 0 unless taxjar_info.present?
 
@@ -311,5 +343,14 @@ class ReceiptPresenter::PaymentInfo
 
       tax_percent = tax_rate / taxjar_info.combined_tax_rate.to_f
       amount_cents * tax_percent
+    end
+
+    def installment_index(subscription, purchase)
+      subscription
+        .purchases
+        .successful
+        .order(:created_at)
+        .pluck(:id)
+        .index(purchase.id).to_i + 1
     end
 end

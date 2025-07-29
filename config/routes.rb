@@ -931,6 +931,7 @@ Rails.application.routes.draw do
             resources :rejections, only: [:create]
           end
         end
+        resources :affiliated_products, only: [:destroy, :update]
       end
     end
 

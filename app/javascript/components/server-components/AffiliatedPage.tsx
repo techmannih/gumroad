@@ -1,7 +1,11 @@
 import * as React from "react";
 import { createCast } from "ts-safe-cast";
 
-import { getPagedAffiliatedProducts } from "$app/data/affiliated_products";
+import {
+  getPagedAffiliatedProducts,
+  removeAffiliatedProduct,
+  approveAffiliatedProduct,
+} from "$app/data/affiliated_products";
 import { formatPriceCentsWithCurrencySymbol } from "$app/utils/currency";
 import { asyncVoid } from "$app/utils/promise";
 import { AbortError, assertResponseError } from "$app/utils/request";
@@ -27,8 +31,10 @@ import { useGlobalEventListener } from "../useGlobalEventListener";
 import placeholder from "$assets/images/placeholders/affiliated.png";
 
 export type AffiliatedProduct = {
+  id: string;
   product_name: string;
   url: string;
+  approved: boolean;
   fee_percentage: number;
   revenue: number;
   humanized_revenue: string;
@@ -91,6 +97,8 @@ type AffiliatedProductsTableProps = {
   pagination: PaginationProps;
   loadAffiliatedProducts: (page: number, sort: Sort<SortKey> | null) => void;
   isLoading: boolean;
+  onRemove: (id: string) => void;
+  onApprove: (id: string) => void;
 };
 
 export type SortKey = "product_name" | "sales_count" | "commission" | "revenue";
@@ -100,6 +108,8 @@ const AffiliatedProductsTable = ({
   pagination,
   loadAffiliatedProducts,
   isLoading,
+  onRemove,
+  onApprove,
 }: AffiliatedProductsTableProps) => {
   const [sort, setSort] = React.useState<Sort<SortKey> | null>(null);
   const thProps = useSortingTableDriver<SortKey>(sort, setSort);
@@ -133,15 +143,21 @@ const AffiliatedProductsTable = ({
 
         <tbody>
           {affiliatedProducts.map((affiliatedProduct) => (
-            <tr key={affiliatedProduct.url}>
+            <tr key={affiliatedProduct.id}>
               <td>
-                <a href={affiliatedProduct.url} title={affiliatedProduct.url} target="_blank" rel="noreferrer">
-                  {affiliatedProduct.product_name}
-                </a>
+                {affiliatedProduct.approved ? (
+                  <a href={affiliatedProduct.url} title={affiliatedProduct.url} target="_blank" rel="noreferrer">
+                    {affiliatedProduct.product_name}
+                  </a>
+                ) : (
+                  affiliatedProduct.product_name
+                )}
               </td>
 
               <td data-label="Sales" style={{ whiteSpace: "nowrap" }}>
-                {affiliatedProduct.sales_count.toLocaleString(userAgentInfo.locale)}
+                {affiliatedProduct.approved
+                  ? affiliatedProduct.sales_count.toLocaleString(userAgentInfo.locale)
+                  : "-"}
               </td>
 
               <td data-label="Type" style={{ whiteSpace: "nowrap" }}>
@@ -149,21 +165,39 @@ const AffiliatedProductsTable = ({
               </td>
 
               <td data-label="Commission">
-                {(affiliatedProduct.fee_percentage / 100).toLocaleString([], { style: "percent" })}
+                {affiliatedProduct.approved
+                  ? (affiliatedProduct.fee_percentage / 100).toLocaleString([], { style: "percent" })
+                  : "-"}
               </td>
 
               <td data-label="Revenue" style={{ whiteSpace: "nowrap" }}>
-                {affiliatedProduct.humanized_revenue}
+                {affiliatedProduct.approved ? affiliatedProduct.humanized_revenue : "-"}
               </td>
 
               <td>
                 <div className="actions">
-                  <CopyToClipboard tooltipPosition="bottom" copyTooltip="Copy link" text={affiliatedProduct.url}>
-                    <Button>
-                      <Icon name="link" />
-                      Copy link
-                    </Button>
-                  </CopyToClipboard>
+                  {affiliatedProduct.approved ? (
+                    <>
+                      <CopyToClipboard tooltipPosition="bottom" copyTooltip="Copy link" text={affiliatedProduct.url}>
+                        <Button>
+                          <Icon name="link" />
+                          Copy link
+                        </Button>
+                      </CopyToClipboard>
+                      <Button color="danger" onClick={() => onRemove(affiliatedProduct.id)} aria-label="Remove">
+                        <Icon name="trash2" />
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button color="primary" onClick={() => onApprove(affiliatedProduct.id)} aria-label="Approve">
+                        <Icon name="check" />
+                      </Button>
+                      <Button color="danger" onClick={() => onRemove(affiliatedProduct.id)} aria-label="Deny">
+                        <Icon name="x" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               </td>
             </tr>
@@ -349,6 +383,28 @@ const AffiliatedPage = ({
                     void loadAffiliatedProducts(page, state.query, sort);
                   }}
                   isLoading={isLoading}
+                  onRemove={(id) => {
+                    setState((prev) => ({
+                      ...prev,
+                      affiliatedProducts: prev.affiliatedProducts.filter((p) => p.id !== id),
+                    }));
+                    void removeAffiliatedProduct(id).catch((e) => {
+                      assertResponseError(e);
+                      showAlert("Failed to remove affiliation", "error");
+                    });
+                  }}
+                  onApprove={(id) => {
+                    setState((prev) => ({
+                      ...prev,
+                      affiliatedProducts: prev.affiliatedProducts.map((p) =>
+                        p.id === id ? { ...p, approved: true } : p
+                      ),
+                    }));
+                    void approveAffiliatedProduct(id).catch((e) => {
+                      assertResponseError(e);
+                      showAlert("Failed to approve affiliation", "error");
+                    });
+                  }}
                 />
               )}
             </div>

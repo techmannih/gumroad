@@ -34,9 +34,11 @@ class AffiliatedProductsPresenter
       records = records.map do |product|
         revenue = product.revenue || 0
         {
+          id: ObfuscateIds.encrypt_numeric(product.link_id),
           product_name: product.name,
           url: product.affiliate_type.constantize.new(id: product.affiliate_id).referral_url_for_product(product),
           fee_percentage: product.basis_points / 100,
+          approved: product.approved,
           revenue:,
           humanized_revenue: MoneyFormatter.format(revenue, :usd, no_cents_if_whole: true, symbol: true),
           sales_count: product.sales_count,
@@ -70,6 +72,7 @@ class AffiliatedProductsPresenter
       select_columns = %{
         affiliates_links.link_id AS link_id,
         affiliates_links.affiliate_id AS affiliate_id,
+        affiliates_links.approved AS approved,
         links.unique_permalink AS unique_permalink,
         links.name AS name,
         affiliates.type AS affiliate_type,
@@ -83,7 +86,8 @@ class AffiliatedProductsPresenter
         links.unique_permalink,
         links.name,
         affiliates.type,
-        affiliates_links.affiliate_basis_points || affiliates.affiliate_basis_points
+        affiliates_links.affiliate_basis_points || affiliates.affiliate_basis_points,
+        affiliates_links.approved
       }
       affiliate_credits_join = %{
         LEFT OUTER JOIN affiliate_credits ON

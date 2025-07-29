@@ -341,11 +341,19 @@ class ReceiptPresenter::PaymentInfo
     end
 
     def final_installment_note
-      return unless installment_subscription? && subscription.charges_completed?
+      return unless installment_subscription? && subscription&.charges_completed?
 
-      dates = subscription.purchases.successful.order(:created_at).map { _1.created_at.to_fs(:formatted_date_abbrev_month) }
-      total = formatted_dollar_amount(subscription.purchases.successful.sum(&:total_transaction_cents))
-      product_name = subscription.link.name
-      "✅ This is your final payment for your installment plan. You will not be charged again. Previous charges on #{dates.join(', ')}. Total Paid: #{total} for #{product_name}."
+      successful_purchases = subscription&.purchases&.successful&.order(:created_at) || []
+      previous_dates = successful_purchases[0...-1].map { |p| p.created_at.to_fs(:formatted_date_abbrev_month) }
+      total = formatted_dollar_amount(successful_purchases.sum(&:total_transaction_cents))
+      product_name = subscription&.link&.name
+
+      parts = [
+        "✅ This is your final payment for your installment plan. You will not be charged again."
+      ]
+      parts << "Previous charges on #{previous_dates.join(', ')}." if previous_dates.any?
+      parts << "Total Paid: #{total} for #{product_name}."
+
+      parts.join(' ')
     end
 end

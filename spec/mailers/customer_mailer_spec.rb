@@ -193,7 +193,7 @@ describe CustomerMailer do
         )
         expect(mail.body.sanitized).to have_text(
           "You will be charged once a month. " \
-          "If you would like to manage your membership you can visit subscription settings."
+          "If you would like to manage your membership you can visit here."
         )
       end
     end
@@ -310,7 +310,7 @@ describe CustomerMailer do
         expect(mail.body.sanitized).to have_text("Payment method VISA *4062")
         expect(mail.body.encoded).to have_link("View content")
 
-        expect(mail.body.sanitized).to have_text("You will be charged once a month. If you would like to manage your membership you can visit subscription settings.")
+        expect(mail.body.sanitized).to have_text("You will be charged once a month. If you would like to manage your membership you can visit here.")
         expect(mail.body.encoded).to have_link("Generate invoice")
       end
 
@@ -832,7 +832,7 @@ describe CustomerMailer do
         end
 
         it "includes the manage membership link" do
-          expect(mail.body.sanitized).to have_text("If you wish to continue your membership, you can visit subscription settings")
+          expect(mail.body.sanitized).to have_text("If you wish to continue your membership, you can visit here")
         end
       end
     end
@@ -872,7 +872,7 @@ describe CustomerMailer do
         let(:purchase) { create(:membership_purchase, link: product, gift_given: gift, is_gift_sender_purchase: true, email: "gifter@example.com") }
 
         it "does not includes the manage membership link, only a notice regarding renewal" do
-          expect(mail.body.sanitized).to_not have_text("If you would like to manage your membership you can visit subscription settings.")
+          expect(mail.body.sanitized).to_not have_text("If you would like to manage your membership you can visit here.")
           expect(mail.body.sanitized).to have_text("Note that giftee@example.com’s membership will not automatically renew.")
         end
       end

@@ -19,7 +19,7 @@ describe("Viewing a purchase receipt", type: :feature, js: true) do
       fill_in "Email address:", with: purchase.email
       click_button "View receipt"
 
-      expect(page).to have_link "subscription settings", href: manage_membership_url
+      expect(page).to have_link "here", href: manage_membership_url
       expect(page).to have_link "Manage membership", href: manage_membership_url
     end
 
@@ -45,7 +45,7 @@ describe("Viewing a purchase receipt", type: :feature, js: true) do
 
     it "allows access to receipt without email confirmation" do
       visit receipt_purchase_url(purchase.external_id, host: "#{PROTOCOL}://#{DOMAIN}")
-      expect(page).to have_link "subscription settings", href: manage_membership_url
+      expect(page).to have_link "here", href: manage_membership_url
       expect(page).to have_link "Manage membership", href: manage_membership_url
     end
   end

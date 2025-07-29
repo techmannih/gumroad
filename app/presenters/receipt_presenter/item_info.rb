@@ -257,14 +257,22 @@ class ReceiptPresenter::ItemInfo
         return if purchase.is_gift_receiver_purchase && subscription.credit_card_id.blank?
         return gift_subscription_renewal_note if subscription.gift? && subscription.credit_card_id.blank?
 
-        "You will be charged once #{recurrence_long_indicator(subscription.recurrence)}. If you would like to manage your membership you can visit #{link_to(
-            "subscription settings",
-            Rails.application.routes.url_helpers.manage_subscription_url(
-              subscription.external_id,
-              { host: UrlService.domain_with_protocol },
-            ),
-            target: "_blank"
-          )}.".html_safe
+        url = link_to(
+          "here",
+          Rails.application.routes.url_helpers.manage_subscription_url(
+            subscription.external_id,
+            host: UrlService.domain_with_protocol
+          ),
+          target: "_blank"
+        )
+
+        if subscription.is_installment_plan?
+          start_date = subscription.created_at.to_fs(:formatted_date_abbrev_month)
+          end_date = subscription.formatted_end_time_of_subscription
+          "Installment plan initiated on #{start_date}. Your final charge will be on #{end_date}. You can manage your payment settings #{url}.".html_safe
+        else
+          "You will be charged once #{recurrence_long_indicator(subscription.recurrence)}. If you would like to manage your membership you can visit #{url}.".html_safe
+        end
       end
     end
 

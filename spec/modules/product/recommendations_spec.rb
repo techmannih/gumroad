@@ -7,6 +7,27 @@ describe Product::Recommendations, :elasticsearch_wait_for_refresh do
     @product = create(:product, user: create(:compliant_user, name: "Some creator person"), taxonomy: create(:taxonomy))
   end
 
+  it "is false if it has no sales" do
+    expect(@product.recommendable_reasons[:has_sales]).to be(false)
+    expect(@product.recommendable?).to be(false)
+  end
+
+  it "is false if seller is not compliant" do
+    user = create(:user, name: "Bad seller", user_risk_state: "not_reviewed")
+    product = create(:product, user:, taxonomy: create(:taxonomy))
+    create(:purchase, link: product, created_at: 1.week.ago)
+
+    expect(product.recommendable_reasons[:seller_compliant]).to be(false)
+    expect(product.recommendable?).to be(false)
+  end
+
+  it "is false if it only has affiliate links" do
+    create(:self_service_affiliate_product, product: @product, seller: @product.user, enabled: true)
+
+    expect(@product.recommendable_reasons[:not_affiliate_only]).to be(false)
+    expect(@product.recommendable?).to be(false)
+  end
+
   it "is true if has recent sale" do
     create(:purchase, :with_review, link: @product, created_at: 1.week.ago)
     expect(@product.recommendable?).to be(true)

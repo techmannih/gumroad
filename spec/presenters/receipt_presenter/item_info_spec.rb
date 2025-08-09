@@ -614,7 +614,7 @@ describe ReceiptPresenter::ItemInfo do
           end
         end
 
-        context "when the subscription is a gift" do
+      context "when the subscription is a gift" do
           before do
             allow(purchase.subscription).to receive(:gift?).and_return(true)
             allow(purchase).to receive(:giftee_name_or_email).and_return("giftee@gumroad.com")
@@ -634,10 +634,29 @@ describe ReceiptPresenter::ItemInfo do
 
             it "returns nil" do
               expect(props[:manage_subscription_note]).to be_nil
-            end
-          end
         end
       end
+
+      context "when the purchase is an installment plan" do
+        let(:product) { create(:product, :with_installment_plan) }
+        let(:purchase) do
+          create(:installment_plan_purchase, link: product, total_transaction_cents: 1_000)
+        end
+
+        it "returns installment plan note" do
+          url = Rails.application.routes.url_helpers.manage_subscription_url(
+            purchase.subscription.external_id,
+            host: UrlService.domain_with_protocol,
+          )
+          start_date = purchase.subscription.true_original_purchase.created_at.to_fs(:formatted_date_abbrev_month)
+          end_date = purchase.subscription.end_time_of_subscription.to_fs(:formatted_date_abbrev_month)
+          expect(props[:manage_subscription_note]).to eq(
+            "Installment plan initiated on #{start_date}. Your final charge will be on #{end_date}. You can manage your payment settings <a target=\"_blank\" href=\"#{url}\">here</a>."
+          )
+        end
+      end
+    end
+  end
     end
 
     describe "commission deposit purchase", :vcr do

@@ -24,6 +24,7 @@ class ReceiptPresenter::PaymentInfo
 
   def notes
     [
+      final_installment_note,
       recurring_subscription_notes,
       usd_currency_note,
       credit_card_note
@@ -153,8 +154,13 @@ class ReceiptPresenter::PaymentInfo
     def today_payment_heading_attribute
       return unless any_upcoming_payments?
 
+      label = "Today's payment"
+      if installment_subscription?
+        label = "Today's Payment: #{current_installment_number} of #{total_installments}"
+      end
+
       {
-        label: "Today's payment",
+        label:,
         value: nil
       }
     end
@@ -217,8 +223,13 @@ class ReceiptPresenter::PaymentInfo
     end
 
     def upcoming_payment_heading_attribute
+      label = "Upcoming #{"payment".pluralize(upcoming_price_attributes.size)}"
+      if installment_subscription?
+        label = "Upcoming Payment: #{current_installment_number + 1} of #{total_installments}"
+      end
+
       {
-        label: "Upcoming #{"payment".pluralize(upcoming_price_attributes.size)}",
+        label:,
         value: nil
       }
     end
@@ -302,14 +313,47 @@ class ReceiptPresenter::PaymentInfo
       end
     end
 
-    def calculate_tax_amount_cents(amount_cents:, tax_rate_field:)
-      taxjar_info = chargeable.purchase_taxjar_info
-      return 0 unless taxjar_info.present?
+  def calculate_tax_amount_cents(amount_cents:, tax_rate_field:)
+    taxjar_info = chargeable.purchase_taxjar_info
+    return 0 unless taxjar_info.present?
 
       tax_rate = taxjar_info.send(tax_rate_field).to_f
       return 0 if tax_rate.zero?
 
-      tax_percent = tax_rate / taxjar_info.combined_tax_rate.to_f
-      amount_cents * tax_percent
+    tax_percent = tax_rate / taxjar_info.combined_tax_rate.to_f
+    amount_cents * tax_percent
+  end
+
+    def installment_subscription?
+      subscription&.is_installment_plan?
+    end
+
+    def subscription
+      chargeable.successful_purchases.first&.subscription
+    end
+
+    def current_installment_number
+      subscription&.purchases&.successful&.count || 0
+    end
+
+    def total_installments
+      subscription&.charge_occurrence_count || 0
+    end
+
+    def final_installment_note
+      return unless installment_subscription? && subscription&.charges_completed?
+
+      successful_purchases = subscription&.purchases&.successful&.order(:created_at) || []
+      previous_dates = successful_purchases[0...-1].map { |p| p.created_at.to_fs(:formatted_date_abbrev_month) }
+      total = formatted_dollar_amount(successful_purchases.sum(&:total_transaction_cents))
+      product_name = subscription&.link&.name
+
+      parts = [
+        "✅ This is your final payment for your installment plan. You will not be charged again."
+      ]
+      parts << "Previous charges on #{previous_dates.join(', ')}." if previous_dates.any?
+      parts << "Total Paid: #{total} for #{product_name}."
+
+      parts.join(' ')
     end
 end

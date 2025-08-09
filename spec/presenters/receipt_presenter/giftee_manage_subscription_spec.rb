@@ -41,7 +41,7 @@ describe ReceiptPresenter::GifteeManageSubscription do
 
       it "returns the expected note" do
         expect(presenter.note).to eq(
-          "Your gift includes a 1-month membership. If you wish to continue your membership, you can visit <a target=\"_blank\" href=\"#{expected_url}\">subscription settings</a>."
+          "Your gift includes a 1-month membership. If you wish to continue your membership, you can visit <a target=\"_blank\" href=\"#{expected_url}\">here</a>."
         )
       end
     end

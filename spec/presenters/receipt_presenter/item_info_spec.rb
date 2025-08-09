@@ -595,7 +595,7 @@ describe ReceiptPresenter::ItemInfo do
           )
           expect(props[:manage_subscription_note]).to eq(
             "You will be charged once a month. If you would like to manage your membership you can visit " \
-            "<a target=\"_blank\" href=\"#{url}\">subscription settings</a>."
+            "<a target=\"_blank\" href=\"#{url}\">here</a>."
           )
         end
 
@@ -609,7 +609,7 @@ describe ReceiptPresenter::ItemInfo do
             )
             expect(props[:manage_subscription_note]).to eq(
               "You will be charged once a month. If you would like to manage your membership you can visit " \
-              "<a target=\"_blank\" href=\"#{url}\">subscription settings</a>."
+              "<a target=\"_blank\" href=\"#{url}\">here</a>."
             )
           end
         end
